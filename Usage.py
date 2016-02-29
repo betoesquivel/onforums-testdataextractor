@@ -1,4 +1,4 @@
-# Copy this folder into your project's root directory
+# Copy the testdataextractor subfolder into your project's root directory
 # Then you can call the extractor from your project's root directory like this:
 from testdataextractor.extractor import Extractor
 import pprint
