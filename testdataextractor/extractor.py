@@ -8,6 +8,15 @@ class Extractor:
 
     @staticmethod
     def add_comment_to_sentences(sentences, comment, comment_id):
+        '''
+            New state of sentences structure:
+            'sid':
+            {
+                'comment': 'cid'
+                'text': '...'
+            }
+
+        '''
         for sid in comment['sentences_ids']:
             sentences[sid]['comment'] = comment_id
 
@@ -33,20 +42,71 @@ class Extractor:
 
         return parsed_comments
 
-    def parse_article(self, html):
-        soup = BeautifulSoup(html, "lxml")
-        self.article = {}
+    def parse_sentences(self, sentences):
+        '''
+            New state of sentences structure:
+            'sid':
+            {
+                'text': '...'
+            }
 
-        sentences = soup.findAll('s')
+        '''
         parsed_sentences = {}
         for s in sentences:
             parsed_sentences[s['id']] = {'text': s.get_text()}
+        return parsed_sentences
+
+    def parse_article(self, html):
+        '''
+        Final state of self.article
+        {
+            'sentences': {
+                'sid':
+                {
+                    'comment': 'cid',
+                    'text': '...',
+                    'links': ['sid', 'sid', ...]
+                }
+            },
+            'comments': {
+                'comment' : {
+                    "bloggerId": "author",
+                    "sentences": [], # all sentences in a comment,
+                    "parents": [] # the order depends on how beautifulsoup gives me the parents
+                }
+            },
+            'links': {
+                'lid': {
+                    'art_sentence': 'sid',
+                    'com_sentence': 'sid',
+                    'confidence': '1',
+                    'validation': 'yes',
+                    'argument': {
+                        'label': 'agree',
+                        'confidence': '1',
+                        'validation': 'yes'
+                    },
+                    'sentiment': {
+                        'label': 'positive',
+                        'confidence': '1',
+                        'validation': 'yes'
+                    }
+                }
+            }
+        }
+        '''
+        soup = BeautifulSoup(html, "lxml")
+        self.article = {}
+
+        parsed_sentences = self.parse_sentences(soup.findAll('s'))
         self.article['sentences'] = parsed_sentences
 
         parsed_comments = self.parse_comments(soup.findAll('comment'))
         self.article['comments'] = parsed_comments
 
-        parsed_links = self.parse_links(soup.findAll(lambda tag:Extractor.is_valid_link(tag)))
+        parsed_links = self.parse_links(
+            soup.findAll(lambda tag:Extractor.is_valid_link(tag))
+        )
         self.article['links'] = parsed_links
 
         return self.article
@@ -71,6 +131,16 @@ class Extractor:
 
     @staticmethod
     def add_link_to_sentences(link, art_sentence, com_sentence):
+        '''
+            New state of sentences structure:
+            'sid':
+            {
+                'comment': 'cid'
+                'text': '...'
+                'links': ['sid', 'sid', ...]
+            }
+
+        '''
         art_sent_links = art_sentence.get('links')
         if art_sent_links:
             art_sent_links.append(link['com_sentence'])
@@ -84,6 +154,25 @@ class Extractor:
             com_sentence['links'] = [link['art_sentence']]
 
     def parse_links(self, links):
+        '''
+        New state of link structure:
+        'lid': {
+            'art_sentence': 'sid',
+            'com_sentence': 'sid',
+            'confidence': '1',
+            'validation': 'yes',
+            'argument': {
+                'label': 'agree',
+                'confidence': '1',
+                'validation': 'yes'
+            },
+            'sentiment': {
+                'label': 'positive',
+                'confidence': '1',
+                'validation': 'yes'
+            }
+        }
+        '''
         parsed_links = {}
         for link_html in links:
             arg_html = link_html.find_next_sibling('argument')
